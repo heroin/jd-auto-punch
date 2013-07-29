@@ -1,6 +1,7 @@
 *.o
 *.a
 *.iml
+*.html
 
 out
 .idea
