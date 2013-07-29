@@ -1,6 +1,5 @@
 *.o
 *.a
-*.so
 *.iml
 
 out
