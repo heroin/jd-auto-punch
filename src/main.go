@@ -14,13 +14,15 @@ import (
 
 const (
 	BROWSER_PATH = "/usr/local/firefox/firefox"
+	FMT          = "%s-%d"
 )
 
 var (
 	LAST_MODIFIED time.Time
 	IS_WORKER     bool
-	RANGE_TIME    int64 = 600
-	QUEUE               = list.New()
+	CURRENT_TASK  map[string]*entity.User = map[string]*entity.User{}
+	RANGE_TIME    int64                   = 600
+	QUEUE                                 = list.New()
 )
 
 func Load(url string) *entity.Task {
@@ -62,7 +64,13 @@ func Jobs(task *entity.Task) {
 	for _, user := range task.Users {
 		user.Date = time.Unix(user.Trigger, user.Trigger)
 		if user.Start && time.Now().Unix()-user.Trigger < RANGE_TIME {
-			go Task(user)
+			value, ok := CURRENT_TASK[fmt.Sprintf(FMT, user.UserName, user.Trigger)]
+			if ok {
+				util.INFO("task is exits, username: %s, trigger: %d", value.UserName, value.Trigger)
+			} else {
+				CURRENT_TASK[fmt.Sprintf(FMT, user.UserName, user.Trigger)] = user
+				go Task(user)
+			}
 		}
 	}
 	util.INFO("shutdown worker!")
@@ -77,9 +85,8 @@ func Task(user *entity.User) {
 		if time.Now().After(user.Date) && time.Now().Unix()-user.Trigger < RANGE_TIME {
 			util.DEBUG("jobs username: %s, password: %s, start: %t, trigger: %d, date: %s",
 				user.UserName, user.PassWord, user.Start, user.Trigger, user.Date)
-			QUEUE.PushBack(util.HtmlFile(user))
+			QUEUE.PushBack(user)
 			break
-		} else {
 		}
 		time.Sleep(time.Duration(10) * time.Second)
 	}
@@ -97,13 +104,16 @@ func OpenBrowser(filename string) {
 func start() {
 	runtime.Gosched()
 	util.INFO("start ....")
+	var user *entity.User
 	for {
 		if QUEUE.Len() > 0 {
 			task := QUEUE.Back()
-			filename := fmt.Sprintf("%s", task.Value)
+			user = task.Value.(*entity.User)
+			filename := fmt.Sprintf("%s", util.HtmlFile(user))
 			util.INFO("open browser file: %s", filename)
 			go OpenBrowser(filename)
 			QUEUE.Remove(task)
+			delete(CURRENT_TASK, fmt.Sprintf(FMT, user.UserName, user.Trigger))
 		} else {
 			time.Sleep(time.Duration(10) * time.Second)
 		}
@@ -121,6 +131,7 @@ func main() {
 			util.INFO("worker is true, go jobs")
 			Jobs(task)
 		}
+		util.DEBUG("task size: %d, queue size: %d", len(CURRENT_TASK), QUEUE.Len())
 		time.Sleep(time.Duration(3) * time.Second)
 	}
 }
