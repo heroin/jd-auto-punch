@@ -64,8 +64,7 @@ func Jobs(task *entity.Task) {
 	for _, user := range task.Users {
 		user.Date = time.Unix(user.Trigger, user.Trigger)
 		if user.Start && time.Now().Unix()-user.Trigger < RANGE_TIME {
-			value, ok := CURRENT_TASK[fmt.Sprintf(FMT, user.UserName, user.Trigger)]
-			if ok {
+			if value, ok := CURRENT_TASK[fmt.Sprintf(FMT, user.UserName, user.Trigger)]; ok {
 				util.INFO("task is exits, username: %s, trigger: %d", value.UserName, value.Trigger)
 			} else {
 				CURRENT_TASK[fmt.Sprintf(FMT, user.UserName, user.Trigger)] = user
