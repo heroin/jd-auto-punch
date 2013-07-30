@@ -13,7 +13,8 @@ type User struct {
 }
 
 type Task struct {
-	Users []*User `json:"users"`
-	Start bool    `json:"start"`
-	Size  int
+	Start  bool     `json:"start"`
+	Users  []*User  `json:"users"`
+	Cancel []string `json:"cancel"`
+	Size   int
 }
