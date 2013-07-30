@@ -3,6 +3,7 @@
 *.iml
 *.html
 
+_obj
 out
 .idea
 
