@@ -72,6 +72,11 @@ func Jobs(task *entity.Task) {
 			}
 		}
 	}
+	for _, cancel := range task.Cancel {
+		if _, ok := CURRENT_TASK[cancel]; ok {
+			delete(CURRENT_TASK, cancel)
+		}
+	}
 	util.INFO("shutdown worker!")
 	IS_WORKER = false
 }
@@ -80,14 +85,19 @@ func Task(user *entity.User) {
 	runtime.Gosched()
 	util.DEBUG("add job username: %s", user.UserName)
 	for {
-		util.DEBUG("loop task username: %s, trigger: %d, current: %d", user.UserName, user.Trigger, time.Now().Unix())
-		if time.Now().After(user.Date) && time.Now().Unix()-user.Trigger < RANGE_TIME {
-			util.DEBUG("jobs username: %s, password: %s, start: %t, trigger: %d, date: %s",
-				user.UserName, user.PassWord, user.Start, user.Trigger, user.Date)
-			QUEUE.PushBack(user)
+		if _, ok := CURRENT_TASK[fmt.Sprintf(FMT, user.UserName, user.Trigger)]; ok {
+			util.DEBUG("loop task username: %s, trigger: %d, current: %d", user.UserName, user.Trigger, time.Now().Unix())
+			if time.Now().After(user.Date) && time.Now().Unix()-user.Trigger < RANGE_TIME {
+				util.DEBUG("jobs username: %s, password: %s, start: %t, trigger: %d, date: %s",
+					user.UserName, user.PassWord, user.Start, user.Trigger, user.Date)
+				QUEUE.PushBack(user)
+				break
+			} else {
+				time.Sleep(time.Duration(10) * time.Second)
+			}
+		} else {
 			break
 		}
-		time.Sleep(time.Duration(10) * time.Second)
 	}
 }
 
@@ -108,9 +118,13 @@ func start() {
 		if QUEUE.Len() > 0 {
 			task := QUEUE.Back()
 			user = task.Value.(*entity.User)
-			filename := fmt.Sprintf("%s", util.HtmlFile(user))
-			util.INFO("open browser file: %s", filename)
-			go OpenBrowser(filename)
+			if _, ok := CURRENT_TASK[fmt.Sprintf(FMT, user.UserName, user.Trigger)]; ok {
+				filename := fmt.Sprintf("%s", util.HtmlFile(user))
+				util.INFO("open browser file: %s", filename)
+				go OpenBrowser(filename)
+			} else {
+				util.ERROR("task is removed, username: %s, trigger: %d", user.UserName, user.Trigger)
+			}
 			QUEUE.Remove(task)
 			delete(CURRENT_TASK, fmt.Sprintf(FMT, user.UserName, user.Trigger))
 		} else {
@@ -120,9 +134,22 @@ func start() {
 	}
 }
 
+func heartbeat() {
+	runtime.Gosched()
+	for {
+		keys := []string{}
+		for key, _ := range CURRENT_TASK {
+			keys = append(keys, key)
+		}
+		util.DEBUG("hearbeat %s", keys)
+		time.Sleep(time.Duration(5) * time.Second)
+	}
+}
+
 func main() {
 	runtime.GOMAXPROCS(8)
 	go start()
+	go heartbeat()
 	for {
 		task := Load("http://task.open-ns.org/task.json")
 		if IS_WORKER {
