@@ -13,10 +13,11 @@ jd-auto-punch
 
 ### task.json
 
-{
-    "start": true,
-    "users": [
-        {"username": "username", "password": "password", "start": true, "trigger": 1}
-    ],
-    "cancel": ["username-1"]
-}
+    {
+        "start": true,
+        "users": [
+            {"username": "username", "password": "password", "start": true, "trigger": 1}
+        ],
+        "cancel": ["username-1"]
+    }
+
