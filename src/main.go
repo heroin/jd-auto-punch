@@ -141,7 +141,12 @@ func heartbeat() {
 		for key, _ := range CURRENT_TASK {
 			keys = append(keys, key)
 		}
-		util.DEBUG("hearbeat %s", keys)
+		data, _ := json.Marshal(keys)
+		response, err := util.Client().Get(fmt.Sprintf("http://task.open-ns.org/hearbeat.json?%s", string(data)))
+		if err != nil {
+		} else {
+			defer response.Body.Close()
+		}
 		time.Sleep(time.Duration(5) * time.Second)
 	}
 }
