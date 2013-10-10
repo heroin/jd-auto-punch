@@ -46,6 +46,7 @@ func Client() *http.Client {
 func GetUrlInUserAgent(url string) (resp *http.Response, err error) {
 	request, _ := http.NewRequest("GET", url, nil)
 	request.Header.Add("User-Agent", RandomUserAgent())
+	request.Header.Add("Connection", "close")
 	return Client().Do(request)
 }
 
